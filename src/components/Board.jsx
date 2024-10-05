@@ -1,51 +1,49 @@
-import { useState } from "react";
 import Square from "./Square";
 
-function Board({ xIsNext, squares, onPlay, numOfRows, numOfCols }) {
-    const [location, setLocation] = useState({ row: null, col: null })
+function Board({ xIsNext, lastSquare, squares, onPlay, numOfRows, numOfCols }) {
 
     function handleClick(i) {
-        if (squares[i] || calculateWinner(squares, location.row, location.col, numOfRows, numOfCols)) {
+        if (squares[i] || calculateWinner(squares, lastSquare.row, lastSquare.col, numOfRows, numOfCols)) {
             return;
         }
 
-        setLocation({ row: Math.floor(i / numOfRows), col: i % numOfCols })
         const nextSquares = squares.slice();
-        if (xIsNext) {
-            nextSquares[i] = 'X';
-        } else {
-            nextSquares[i] = 'O';
-        }
+        nextSquares[i] = xIsNext ? 'X' : 'O';
+
         onPlay({
             squares: nextSquares,
             location: {
-                row: Math.floor(i / numOfRows),
+                row: Math.floor(i / numOfCols),
                 col: i % numOfCols
             }
         });
     }
 
-    const check = calculateWinner(squares, location.row, location.col, numOfRows, numOfCols);
+    const winnerInfo = calculateWinner(squares, lastSquare.row, lastSquare.col, numOfRows, numOfCols);
     let status;
-    if (check) {
-        status = 'Winner: ' + check.winner;
+    if (winnerInfo) {
+        status = 'Winner: ' + winnerInfo.winner;
+    } else if (squares.every(cell => cell !== null)) {
+        status = 'Drawwwww';
     } else {
-        if (squares.every(cell => cell !== null)) {
-            status = 'Drawwwwww'
-        } else {
-            status = 'Next player: ' + (xIsNext ? 'X' : 'O');
-        }
+        status = 'Next player: ' + (xIsNext ? 'X' : 'O');
     }
 
-    const board = []
-    for (let i = 0; i < numOfRows; i++) {
-        const row = []
-        for (let j = 0; j < numOfCols; j++) {
-            const key = i * numOfRows + j
-            row.push(<Square isWinning={check && check.tracedSquares.indexOf(key) != -1} value={squares[key]} onSquareClick={() => handleClick(key)} />)
-        }
-        board.push(<div className="board-row">{row}</div>)
-    }
+    const board = Array.from({ length: numOfRows }, (_, rowIndex) => (
+        <div className="board-row" key={rowIndex}>
+            {Array.from({ length: numOfCols }, (_, colIndex) => {
+                const key = rowIndex * numOfCols + colIndex;
+                return (
+                    <Square
+                        key={key}
+                        isWinning={winnerInfo && winnerInfo.tracedSquares.includes(key)}
+                        value={squares[key]}
+                        onSquareClick={() => handleClick(key)}
+                    />
+                );
+            })}
+        </div>
+    ));
 
     return (
         <>
@@ -55,51 +53,42 @@ function Board({ xIsNext, squares, onPlay, numOfRows, numOfCols }) {
     );
 }
 
-function calculateWinner(squares, row, col, numOfRows, numOfCols, winLength = 3) {
-    if (!row || !col) return
+function calculateWinner(squares, lastRow, lastCol, numOfRows, numOfCols, winLength = 3) {
+    if (lastRow == null || lastCol == null) return null;
 
-    const player = squares[row * numOfRows + col];
+    const player = squares[lastRow * numOfCols + lastCol];
+    if (!player) return null;
 
     function checkDirection(deltaRow, deltaCol) {
         let count = 0;
-        let tracedSquares = []; 
-        for (let i = -2; i <= 2; i++) {
-            const newRow = row + i * deltaRow;
-            const newCol = col + i * deltaCol;
+        const tracedSquares = [];
+
+        for (let i = -winLength + 1; i < winLength; i++) {
+            const newRow = lastRow + i * deltaRow;
+            const newCol = lastCol + i * deltaCol;
 
             if (newRow >= 0 && newRow < numOfRows && newCol >= 0 && newCol < numOfCols) {
-                if (squares[newRow * numOfRows + newCol] === player) {
+                if (squares[newRow * numOfCols + newCol] === player) {
                     count++;
-                    tracedSquares.push(newRow * numOfRows + newCol);
+                    tracedSquares.push(newRow * numOfCols + newCol);
                     if (count === winLength) {
-                        return {
-                            result: true,
-                            tracedSquares: tracedSquares
-                        };
+                        return { result: true, tracedSquares };
                     }
                 } else {
                     count = 0;
-                    tracedSquares = [];
+                    tracedSquares.length = 0;
                 }
             }
         }
-        return { result: false };
+        return { result: false, tracedSquares };
     }
 
-    let check = checkDirection(0, 1);
-    if (check.result) return { winner: player, tracedSquares: check.tracedSquares };
+    for (const [deltaRow, deltaCol] of [[0, 1], [1, 0], [1, 1], [1, -1]]) {
+        const check = checkDirection(deltaRow, deltaCol);
+        if (check.result) return { winner: player, tracedSquares: check.tracedSquares };
+    }
 
-    check = checkDirection(1, 0);
-    if (check.result) return { winner: player, tracedSquares: check.tracedSquares };
-
-    check = checkDirection(1, 1);
-    if (check.result) return { winner: player, tracedSquares: check.tracedSquares };
-
-    check = checkDirection(1, -1);
-    if (check.result) return { winner: player, tracedSquares: check.tracedSquares };
-
-    return null;  // No winner
+    return null; // No winner
 }
 
-
-export default Board
+export default Board;

@@ -2,13 +2,14 @@ import Board from "./Board";
 import { useState } from "react";
 
 function Game() {
-    const numOfCols = 3
-    const numOfRows = 3
-    const [history, setHistory] = useState([{ squares: Array(numOfCols * numOfRows).fill(null) }]);
+    const numOfCols = 5
+    const numOfRows = 4
+    const [history, setHistory] = useState([{ squares: Array(numOfCols * numOfRows).fill(null), location: { col: null, row: null } }]);
     const [currentMove, setCurrentMove] = useState(0);
     const [isAscending, setIsAscending] = useState(true);
     const xIsNext = currentMove % 2 === 0;
     const currentSquares = history[currentMove].squares;
+    const lastSquare = history[currentMove].location
 
     function handlePlay(nextSquares) {
         const nextHistory = [...history.slice(0, currentMove + 1), nextSquares];
@@ -40,7 +41,7 @@ function Game() {
     return (
         <div className="game">
             <div className="game-board">
-                <Board xIsNext={xIsNext} squares={currentSquares} onPlay={handlePlay} numOfRows={numOfRows} numOfCols={numOfCols} />
+                <Board lastSquare={lastSquare} xIsNext={xIsNext} squares={currentSquares} onPlay={handlePlay} numOfRows={numOfRows} numOfCols={numOfCols} />
             </div>
             <div className="game-info">
                 <div className="toggle-button">
